@@ -1,9 +1,7 @@
 from flask import current_app as app, render_template, request, redirect, abort, jsonify, json as json_mod, url_for, session, Blueprint
 
 from CTFd.utils import ctftime, view_after_ctf, authed, unix_time, get_kpm, can_view_challenges, is_admin, get_config, get_ip, is_verified
-from CTFd.models import db, Challenges, Files, Solves, WrongKeys, Keys, Tags, Teams, Awards
-
-from sqlalchemy.sql import and_, or_, not_
+from CTFd.models import db, Challenges, Files, Solves, WrongKeys, Keys, Tags, Teams
 
 import time
 import re
@@ -38,7 +36,7 @@ def chals():
             else:
                 return redirect('/')
     if can_view_challenges():
-        chals = Challenges.query.filter(or_(Challenges.hidden != True, Challenges.hidden == None)).add_columns('id', 'name', 'value', 'description', 'category').order_by(Challenges.value).all()
+        chals = Challenges.query.add_columns('id', 'name', 'value', 'description', 'category').order_by(Challenges.value).all()
 
         json = {'game':[]}
         for x in chals:
@@ -76,28 +74,10 @@ def solves(teamid=None):
             return redirect(url_for('auth.login', next='solves'))
     else:
         solves = Solves.query.filter_by(teamid=teamid).all()
-        awards = Awards.query.filter_by(teamid=teamid).all()
     db.session.close()
     json = {'solves':[]}
-    for solve in solves:
-        json['solves'].append({
-            'chal': solve.chal.name,
-            'chalid': solve.chalid,
-            'team': solve.teamid,
-            'value': solve.chal.value,
-            'category': solve.chal.category,
-            'time': unix_time(solve.date)
-        })
-    for award in awards:
-        json['solves'].append({
-            'chal': award.name,
-            'chalid': None,
-            'team': award.teamid,
-            'value': award.value,
-            'category': award.category,
-            'time': unix_time(award.date)
-        })
-    json['solves'].sort(key=lambda k: k['time'])
+    for x in solves:
+        json['solves'].append({ 'chal':x.chal.name, 'chalid':x.chalid,'team':x.teamid, 'value': x.chal.value, 'category':x.chal.category, 'time':unix_time(x.date)})
     return jsonify(json)
 
 
